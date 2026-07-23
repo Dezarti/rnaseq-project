@@ -1,6 +1,9 @@
 # Ignore raw and processed data
 data/
 
+# Ignore configuration of interpreter
+.vscode/
+
 # Ignore R and Python cache files
 .Rhistory
 .RData
