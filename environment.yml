@@ -1,0 +1,29 @@
+name: rnaseq-project
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Python core and packages
+  - python=3.11
+  - pandas
+  - numpy
+  - matplotlib
+  - scanpy
+  - anndata
+  - jupyter
+  
+  # R core and Markdown support
+  - r-base=4.3
+  - r-irkernel
+  - r-rmarkdown
+  - r-knitr
+  
+  # R Analysis Packages (CRAN)
+  - r-tidyverse
+  - r-pheatmap
+  - r-umap
+  
+  # Bioinformatics Packages (Bioconductor)
+  - bioconductor-deseq2
+  - bioconductor-noiseq

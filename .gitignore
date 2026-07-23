@@ -1,0 +1,9 @@
+# Ignore raw and processed data
+data/
+
+# Ignore R and Python cache files
+.Rhistory
+.RData
+.Ruserdata
+__pycache__/
+.ipynb_checkpoints/
