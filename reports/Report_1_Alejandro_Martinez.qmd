@@ -1,27 +1,408 @@
 ---
-title: "BESE 300 - Project"
+title: "PART 1: Analysis of a small data-set."
 author: "Alejandro Martinez Hernandez"
-format: typst
+number-sections: true
+format: 
+  typst:
+    columns: 2
+    fontsize: 10pt
+    margin:
+      top: 15mm
+      bottom: 15mm
+      left: 15mm
+      right: 15mm
+knitr:
+  opts_chunk:
+    fig.align: center
 editor: visual
 ---
 
-## Quarto
+## Data-set used in the analysis
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+The present work analyses the fictional data-set 'DATA_SET_REFERENCE_EVAL.csv', which presents 400 measurements of HDL and LDL in patients across two planets (Earth and Venus) from two populations (tall and small), as seen in @tbl-summary-py.
 
-## Running Code
+The measurement units were not given, but based on the magnitude of the numbers, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL). No further information was given about the dataset due to it being fictional; nonetheless, in a real one, the source must be trustworthy with traceable methods.
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-```{r}
-1 + 1
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| include: false
+library(here)
+# LOAD THE DATA FRAME
+df_1 <- read.csv("../data/Part_1/DATA_SET_REFERENCE_EVAL.csv", row.names = 1)
 ```
 
-You can add options to executable code like this
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| label: tbl-summary-py
+#| tbl-cap: "Fictional Data-Set. First 6 entries"
+#| echo: false
+#head(df_1) # Check data
+knitr::kable(head(df_1, n = 3L))
+```
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| echo: false
+#| include: false
+print(paste("Number of rows:", nrow(df_1))) # Check number of rows
+print(paste("Number of columns:", ncol(df_1))) # Check number of columns
+print(paste("Column names:", paste(colnames(df_1), collapse = ", "))) 
+print(paste("Unique values inside 'Size' column:", 
+            paste(unique(df_1$Size), collapse = ", ")))
+print(paste("Unique values inside 'Planet' column:", 
+            paste(unique(df_1$Planet), collapse = ", ")))
+print(paste("Number of 'Venus' patients:", sum(df_1$Planet == "Venus", na.rm = TRUE)))
+print(paste("Number of 'Earth' patients:", sum(df_1$Planet == "Earth", na.rm = TRUE))) 
+print(paste("Number of tall patients:", sum(df_1$Size == "Tall", na.rm = TRUE))) 
+print(paste("Number of small patients:", sum(df_1$Size == "Small", na.rm = TRUE)))
+```
+
+### Overview
+
+- **Total Records***:* 400 patients.
+
+- **Locations:** Distributed nearly evenly across two planets (204 on Venus, 196 on Earth).
+
+- **Demographics:** Exactly split by size (200 Tall, 200 Small).
+
+- **Columns:**
+
+  - **Patient:** Unique identifier (Patient1 to Patient400).
+
+  - **HDL (High-Density Lipoprotein levels):** Numerical variable (mg/dL).
+
+  - **LDL (Low-Density Lipoprotein levels) :** Numerical variable (mg/dL).
+
+  - **Size:** Categorical variable (Tall or Small).
+
+  - **Planet:** Categorical variable (Venus or Earth).
+
+Both columns, HDL and LDL, contain negative values (something impossible) and one NA value each, telling us that the data must be cleaned. Apart from that, all the other columns seem to be in order, without typos or strange categories; therefore, most of the attention will be centered on the columns HDL and LDL.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| label: tbl-summary2-py
+#| tbl-cap: "Data-Set Summary"
+#| echo: false
+#| include: false
+# summary(df_1)
+knitr::kable(summary(df_1))
+```
+
+## Curation of the data
+
+### Negative and NA values
+
+It was decided to remove each patient who has a negative or NA value. For this particular data-set, both negative and NA values for HDL and LDL corresponded to only 2 patients as seen in @tbl-negative-NA-py.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| label: tbl-negative-NA-py
+#| tbl-cap: "Negative and NA Values"
+#| echo: false
+# Checking the patient to eliminate
+n_idx_hdl <- df_1$HDL <= 0 | is.na(df_1$HDL)
+n_idx_ldl <- df_1$LDL <= 0 | is.na(df_1$LDL)
+
+df_f_o <- df_1[which(n_idx_hdl | n_idx_ldl), ]
+#head(df_f_o)
+knitr::kable(head(df_f_o))
+```
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| include: false
+## Removing negative values
+df_2 <- data.frame(df_1) # Security copy
+
+### Idx 1: Delete individuals with HDL < 0
+idx_hdl <- df_2$HDL >= 0 & !is.na(df_2$HDL)
+
+### Idx 2: Delete individuals with LDL < 0
+idx_ldl <- df_2$LDL >= 0 & !is.na(df_2$LDL)
+
+### Cleaning with filters
+df_3 <- df_2[idx_hdl & idx_ldl, ] # Here we remove 2 values.
+print(paste("Number of patients after removing negative and NA values: ", nrow(df_3)))
+```
+
+### Outliers
+
+Outliers were identified using a threshold of three standard deviations from the mean. For each numerical column in the dataset, we calculated the upper limit (@eq-outlier_1) and lower limit (@eq-outlier_2) as follows:
+
+$$\text{Upper Limit} = \text{mean} + 3 \times \text{SD}$$ {#eq-outlier_1}
+
+$$\text{Lower Limit} = \text{mean} - 3 \times \text{SD}  $$ {#eq-outlier_2}
+
+However, after applying these filters, no values were excluded, resulting in the same 398 observations remaining from the 'Negative and NA values' step.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+#| include: false
+## Identifying and removing outliers
+## Define outlier: > mean - 3*sd or > mean + 3*sd
+max_limit_LDL <- mean(df_3$LDL, na.rm = T) + 3*sd(df_3$LDL, na.rm = T)
+min_limit_LDL <- mean(df_3$LDL, na.rm = T) - 3*sd(df_3$LDL, na.rm = T)
+max_limit_HDL <- mean(df_3$HDL, na.rm = T) + 3*sd(df_3$HDL, na.rm = T)
+min_limit_HDL <- mean(df_3$HDL, na.rm = T) - 3*sd(df_3$HDL, na.rm = T)
+
+## Creating filters
+clean_LDL <- min_limit_LDL < df_3$LDL & 
+  max_limit_LDL > df_3$LDL # Only TRUE
+
+clean_HDL <- min_limit_HDL < df_3$HDL & 
+  max_limit_HDL > df_3$HDL 
+
+## Cleaning with filters
+df_4 <- df_3[clean_LDL & clean_HDL, ]
+sum(df_4$HDL == df_3$HDL)
+```
+
+## Data exploration
 
 ```{r}
 #| echo: false
-2 * 2
+#| label: fig-boxplot_1
+#| include: false
+# Plot LDL grouped by Planets using the formula interface
+
+# Groups LDL by Planet AND Size on the same x-axis
+# Split canvas into 1 row, 2 columns
+par(mfrow = c(1, 2)) 
+
+boxplot(LDL ~ Planet * Size, 
+        data = df_4, 
+        main = "LDL Levels by Planet and Size", 
+        col = c("#56B4E9", "#E69F00"), 
+        pch = 16)
+
+boxplot(HDL ~ Planet * Size, 
+        data = df_4, 
+        main = "HDL Levels by Planet and Size", 
+        col = c("#56B4E9", "#E69F00"), 
+        pch = 16)
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+#| label: fig-ldl-size
+#| fig-cap: "LDL levels by Size group"
+#| echo: false
+#| fig-width: 5
+#| fig-height: 5
+
+# Colorblind-friendly palette (Okabe-Ito), one color per Size group
+group_colors <- c("Small" = "#E69F00", "Tall" = "#56B4E9")
+
+boxplot(LDL ~ Size, 
+        data = df_4, 
+        col = group_colors,
+        density = c(25, 70),   # different shading density = second visual cue, not just color
+        pch = 16,
+        ylab = "LDL")
+
+```
+
+```{r}
+#| label: fig-hdl-size
+#| fig-cap: "B. HDL levels by Size group"
+#| echo: false
+#| fig-width: 5
+#| fig-height: 5
+boxplot(HDL ~ Size, 
+        data = df_4, 
+        col = group_colors,
+        density = c(25, 70), 
+        pch = 16,
+        ylab = "HDL")
+```
+
+```{r}
+#| echo: false
+#| label: fig-scatterplot_1
+#| fig-cap: "HDL vs LDL by Size (color) and Planet (shape)"
+#| fig-width: 5
+#| fig-height: 6
+# Comparing two continuos values
+df_4$Group <- interaction(df_4$Planet, df_4$Size, sep = "-") # Combined group factor
+# Levels will be: Earth-Small, Venus-Small, Earth-Tall, Venus-Tall (alphabetical/factor order)
+group_levels <- levels(df_4$Group)
+cb_colors <- c("#E69F00", "#0072B2")  # for Size: Small, Tall
+shapes <- c(16, 17)                    # for Planet: Earth = circle, Venus = triangle
+
+plot(df_4$LDL, df_4$HDL,
+     col = cb_colors[as.factor(df_4$Size)],
+     pch = shapes[as.factor(df_4$Planet)],
+     xlab = "LDL", ylab = "HDL")
+
+legend("topright",
+       legend = c(levels(as.factor(df_4$Size)), levels(as.factor(df_4$Planet))),
+       col = c(cb_colors, "black", "black"),
+       pch = c(19, 19, shapes),
+       pt.cex = 1, bty = "n")
+```
+
+```{r}
+#| echo: false
+write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = FALSE)
+```
+
+## Statistics used to validate associations.
+
+### (a) 1 analysis of 2 continuous variables
+
+```{python, error=FALSE, message=FALSE, warning=FALSE}
+#| label: tbl-normality
+#| tbl-cap: "Shapiro-Wilk normality test for HDL and LDL"
+#| echo: false
+
+## IMPORTING DATA
+import pandas as pd
+from scipy.stats import shapiro, pearsonr, spearmanr
+
+df = pd.read_csv('../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv')
+data = df.copy()
+
+## ANALYSIS
+HDL = data['HDL'].dropna()
+LDL = data['LDL'].dropna()
+
+shapiro_HDL = shapiro(HDL)
+shapiro_LDL = shapiro(LDL)
+
+normality_table = pd.DataFrame({
+    'Variable': ['HDL', 'LDL'],
+    'Statistic': [shapiro_HDL.statistic, shapiro_LDL.statistic],
+    'p-value': [shapiro_HDL.pvalue, shapiro_LDL.pvalue],
+    'Conclusion': [
+        'Reject H0 (non-normal)' if shapiro_HDL.pvalue < 0.05 else 'Fail to reject H0 (normal)',
+        'Reject H0 (non-normal)' if shapiro_LDL.pvalue < 0.05 else 'Fail to reject H0 (normal)'
+    ]
+})
+
+normality_table.style.format({'Statistic': '{:.3f}', 'p-value': '{:.2e}'}).hide(axis='index')
+```
+
+```{python}
+#| label: tbl-correlation
+#| tbl-cap: "Correlation between HDL and LDL"
+#| echo: false
+
+if shapiro_HDL.pvalue > 0.05 and shapiro_LDL.pvalue > 0.05:
+    method = 'Pearson'
+    corr, p_value = pearsonr(HDL, LDL)
+else:
+    method = 'Spearman'
+    corr, p_value = spearmanr(HDL, LDL)
+
+correlation_table = pd.DataFrame({
+    'Method': [method],
+    'Correlation coefficient': [corr],
+    'p-value': [p_value]
+})
+
+correlation_table.style.format({'Correlation coefficient': '{:.3f}', 'p-value': '{:.2e}'}).hide(axis='index')
+
+```
+
+### (b) 1 analysis of 1 continuous variable vs 1 categorical variable.
+
+```{python, error=FALSE, message=FALSE, warning=FALSE}
+#| label: tbl-normality-groups
+#| tbl-cap: "Normality of groups"
+#| include: false
+## IMPORTING DATA
+import pandas as pd
+from scipy.stats import ttest_ind, shapiro, kruskal
+
+df = pd.read_csv('../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv')
+data = df.copy()
+
+## Split the data into groups
+tall_HDL = data[data['Size'] == 'Tall']['HDL'].dropna()
+small_HDL = data[data['Size'] == 'Small']['HDL'].dropna()
+tall_LDL = data[data['Size'] == 'Tall']['LDL'].dropna()
+small_LDL = data[data['Size'] == 'Small']['LDL'].dropna()
+earth_HDL = data[data['Planet'] == 'Earth']['HDL'].dropna()
+venus_HDL = data[data['Planet'] == 'Venus']['HDL'].dropna()
+earth_LDL = data[data['Planet'] == 'Earth']['LDL'].dropna()
+venus_LDL = data[data['Planet'] == 'Venus']['LDL'].dropna()
+
+## Function to check normality
+def analyze_normality(variable, variable_name):
+    shapiro_test = shapiro(variable)
+    if shapiro_test.pvalue < 0.05:
+        conclusion = "Reject Ho (not normal)"
+    else:
+        conclusion = "Fail to reject Ho (normal)"
+    return variable_name, shapiro_test.pvalue, conclusion
+
+## Function to compare two groups
+def test_analysis(var1, var2, p_var1, p_var2, comparison_name):
+    if p_var1 > 0.05 and p_var2 > 0.05:
+        # Both distributions are normal, use Welch's t-test
+        stat, p_value = ttest_ind(var1, var2, equal_var=False)
+        test_used = "T-test (Welch)"
+    else:
+        # At least one distribution is not normal, use Kruskal-Wallis
+        result = kruskal(var1, var2)
+        stat, p_value = result.statistic, result.pvalue
+        test_used = "Kruskal-Wallis"
+    conclusion = "Significant" if p_value < 0.05 else "Not significant"
+    return comparison_name, test_used, stat, p_value, conclusion
+
+## Run normality checks
+normality_results = [
+    analyze_normality(tall_HDL, "Tall-HDL"),
+    analyze_normality(small_HDL, "Small-HDL"),
+    analyze_normality(tall_LDL, "Tall-LDL"),
+    analyze_normality(small_LDL, "Small-LDL"),
+    analyze_normality(earth_HDL, "Earth-HDL"),
+    analyze_normality(venus_HDL, "Venus-HDL"),
+    analyze_normality(earth_LDL, "Earth-LDL"),
+    analyze_normality(venus_LDL, "Venus-LDL"),
+]
+
+normality_table = pd.DataFrame(normality_results, columns=["Variable", "Shapiro p-value", "Conclusion"])
+normality_table.style.format({'Shapiro p-value': '{:.3f}'}).hide(axis='index')
+```
+
+```{python}
+#| label: tbl-comparison-groups
+#| tbl-cap: "Comparison groups"
+#| echo: false
+
+## Run comparisons (uses p-values already computed above)
+p_tall_HDL = normality_results[0][1]
+p_small_HDL = normality_results[1][1]
+p_tall_LDL = normality_results[2][1]
+p_small_LDL = normality_results[3][1]
+p_earth_HDL = normality_results[4][1]
+p_venus_HDL = normality_results[5][1]
+p_earth_LDL = normality_results[6][1]
+p_venus_LDL = normality_results[7][1]
+
+comparison_results = [
+    test_analysis(tall_HDL, small_HDL, p_tall_HDL, p_small_HDL, "Tall vs Small (HDL)"),
+    test_analysis(tall_LDL, small_LDL, p_tall_LDL, p_small_LDL, "Tall vs Small (LDL)"),
+    test_analysis(earth_HDL, venus_HDL, p_earth_HDL, p_venus_HDL, "Earth vs Venus (HDL)"),
+    test_analysis(earth_LDL, venus_LDL, p_earth_LDL, p_venus_LDL, "Earth vs Venus (LDL)"),
+]
+
+comparison_table = pd.DataFrame(
+    comparison_results,
+    columns=["Comparison", "Test", "Statistic", "p-value", "Conclusion"]
+)
+
+# Shorten long text so the table fits in one column
+comparison_table["Test"] = comparison_table["Test"].replace({
+    "T-test (Welch)": "T-test",
+    "Kruskal-Wallis": "K-W"
+})
+comparison_table["Conclusion"] = comparison_table["Conclusion"].replace({
+    "Significant": "Sig.",
+    "Not significant": "N.S."
+})
+
+(
+    comparison_table.style
+    .format({'Statistic': '{:.3f}', 'p-value': '{:.2e}'})
+    .hide(axis='index')
+    .set_table_styles([
+        {'selector': 'th, td', 'props': [('font-size', '11px'), ('padding', '4px 8px')]}
+    ])
+)
+```

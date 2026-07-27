@@ -1,27 +1,34 @@
+library(here)
 # LOAD THE DATA FRAME
-df_1 <- read.csv("data/Part_1/DATA_SET_REFERENCE_EVAL.csv", row.names = 1)
+df_1 <- read.csv("../data/Part_1/DATA_SET_REFERENCE_EVAL.csv", row.names = 1)
 head(df_1) # Check data
-par(mfrow = c(1, 1)) 
+
+
 # GENERAL EXPLORATION
 summary(df_1)
-unique(df_1$Planet)
-unique(df_1$Size)
-sum(is.na(df_1))
-boxplot(df_1[1:2])
-
-## 1. Col HDL:
-##        - Contains negative values
-##        - Contains 1 NA value
-## 2. Col LDL:
-##        - Contains negative values
-##        - Contains 1 NA value
-## 3. Col Size:
-##        - Two values: "Tall" and "Small"
-## 4. Col Planet:
-##        - Two values: "Earth" and "Venus"
+print(paste("Number of rows:", nrow(df_1))) # Check number of rows
+print(paste("Number of columns:", ncol(df_1))) # Check number of columns
+print(paste("Column names:", paste(colnames(df_1), collapse = ", "))) 
+print(paste("Unique values inside 'Size' column:", 
+            paste(unique(df_1$Size), collapse = ", ")))
+print(paste("Unique values inside 'Planet' column:", 
+            paste(unique(df_1$Planet), collapse = ", ")))
+print(paste("Number of 'Venus' patients:", sum(df_1$Planet == "Venus", na.rm = TRUE)))
+print(paste("Number of 'Earth' patients:", sum(df_1$Planet == "Earth", na.rm = TRUE))) 
+print(paste("Number of tall patients:", sum(df_1$Size == "Tall", na.rm = TRUE))) 
+print(paste("Number of small patients:", sum(df_1$Size == "Small", na.rm = TRUE)))
 
 
 ## FILTERING AND CLEANING
+## Checking Patients to eliminate
+# Checking the patient to eliminate
+n_idx_hdl <- df_1$HDL <= 0 | is.na(df_1$HDL)
+n_idx_ldl <- df_1$LDL <= 0 | is.na(df_1$HDL)
+
+df_f_o <- df_1[which(n_idx_hdl | n_idx_ldl), ]
+head(df_f_o)
+
+
 ## Removing negative values
 df_2 <- data.frame(df_1) # Security copy
 
@@ -55,9 +62,6 @@ unique(clean_HDL) # Only Unique values
 ## Cleaning with filters
 df_4 <- df_3[clean_LDL & clean_HDL, ]
 
-## Cleaning with filters
-df_4 <- df_3[clean_LDL & clean_HDL, ]
-
 # Plot LDL grouped by Planets using the formula interface
 
 # Groups LDL by Planet AND Size on the same x-axis
@@ -76,11 +80,10 @@ boxplot(HDL ~ Planet * Size,
         col = c("#56B4E9", "#E69F00"), 
         pch = 16)
 
-# Reset canvas layout back to default
-#par(mfrow = c(1, 1))
 
 
-# Comparing two continuos values
+# COMPARING TWO CONTINUOS VALUES
+
 ## GRAPH A
 df_4$Group <- interaction(df_4$Planet, df_4$Size, sep = "-") # Combined group factor
 # Levels will be: Earth-Small, Venus-Small, Earth-Tall, Venus-Tall (alphabetical/factor order)
@@ -115,61 +118,8 @@ legend("topright",
        pt.cex = 1, bty = "n")
 
 
-#########################################
-### SAVING RESULTS
-#########################################
+# SAVING RESULTS
 write.csv(df_4, "data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = FALSE)
-
-
-
-
-
-
-
-########################################
-# 1 analysis of 2 continuous variables.
-#######################################
-
-#"Is there a difference in HDL and LDL levels between Tall and Small patients?" 
-#"Is there a difference in HDL and LDL levels between Earth and Venus patients?"
-
-# ## Checking normality in the data.
-# s1 = shapiro.test(df_4$HDL[df_4$Planet == 'Earth' & df_4$Size == 'Tall'])$p.value  # Ho not rejected
-# s2 = shapiro.test(df_4$HDL[df_4$Planet == 'Venus' & df_4$Size == 'Tall'])$p.value  # Ho not rejected
-# s3 = shapiro.test(df_4$HDL[df_4$Planet == 'Earth' & df_4$Size == 'Small'])$p.value # Ho not rejected
-# s4 = shapiro.test(df_4$HDL[df_4$Planet == 'Venus' & df_4$Size == 'Small'])$p.value # Ho not rejected
-# 
-
-# results = data.frame(Planet = c('Earth', 'Venus', 'Earth', 'Venus'),
-#   Size = c('Tall', 'Tall', 'Small', 'Small'),
-#   Shapiro_Test =  c(s1, s2, s3, s4),
-#   Result = c('')
-# )
-# 
-# for (i in 1:nrow(results)){
-#   if (results$Shapiro_Test[i] <= 0.05){
-#     results$Result[i] = 'Reject Ho'
-#   } else {
-#     results$Result[i] = 'Cannot reject Ho'
-#   }
-# }
-# 
-# print(results)
-# 
-# t.test
-# 
-
-
-
-
-
-
-
-
-
-#######################################
-# Continuous vs. continuous: HDL vs. LDL
-#######################################
 
 
 
