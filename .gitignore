@@ -1,6 +1,8 @@
 # Ignore raw and processed data
 data/
 
+.quarto/
+
 # Ignore configuration of interpreter
 .vscode/
 
