@@ -1,6 +1,13 @@
 ---
-title: "PART 1: Analysis of a small data-set."
-author: "Alejandro Martinez Hernandez"
+title: "FINAL EVALUATION"
+subtitle: "PART 1: Analysis of a small data-set | BESE-300"
+bibliography: references.bib
+citeproc: true
+author: 
+  - name: "Alejandro Martinez Hernandez | KAUST ID: 219559"
+    affiliations:
+      - name: "King Abdullah University of Science and Technology
+      "
 number-sections: true
 format: 
   typst:
@@ -17,17 +24,16 @@ knitr:
 editor: visual
 ---
 
-## Data-set used in the analysis
+# Data-set used in the analysis
 
-The present work analyses the fictional data-set 'DATA_SET_REFERENCE_EVAL.csv', which presents 400 measurements of HDL and LDL in patients across two planets (Earth and Venus) from two populations (tall and small), as seen in @tbl-summary-py.
-
-The measurement units were not given, but based on the magnitude of the numbers, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL). No further information was given about the dataset due to it being fictional; nonetheless, in a real one, the source must be trustworthy with traceable methods.
+The present work analyses the fictional data-set 'DATA_SET_REFERENCE_EVAL.csv', which presents 400 measurements of HDL and LDL in patients across two planets (Earth and Venus) from two populations (tall and small), as seen in @tbl-summary-py. No further information was given about the dataset due to it being fictional; nonetheless, in a real one, the source must be trustworthy with traceable methods.
 
 ```{r, error=FALSE, message=FALSE, warning=FALSE}
 #| include: false
 library(here)
 # LOAD THE DATA FRAME
-df_1 <- read.csv("../data/Part_1/DATA_SET_REFERENCE_EVAL.csv", row.names = 1)
+#df_1 <- read.csv("../data/Part_1/DATA_SET_REFERENCE_EVAL.csv", row.names = 1)
+df_1 <- read.csv(here("data", "Part_1", "DATA_SET_REFERENCE_EVAL.csv"), row.names = 1)
 ```
 
 ```{r, error=FALSE, message=FALSE, warning=FALSE}
@@ -54,7 +60,7 @@ print(paste("Number of tall patients:", sum(df_1$Size == "Tall", na.rm = TRUE)))
 print(paste("Number of small patients:", sum(df_1$Size == "Small", na.rm = TRUE)))
 ```
 
-### Overview
+## Overview
 
 - **Total Records***:* 400 patients.
 
@@ -85,9 +91,9 @@ Both columns, HDL and LDL, contain negative values (something impossible) and on
 knitr::kable(summary(df_1))
 ```
 
-## Curation of the data
+# Curation of the data
 
-### Negative and NA values
+## Negative and NA values
 
 It was decided to remove each patient who has a negative or NA value. For this particular data-set, both negative and NA values for HDL and LDL corresponded to only 2 patients as seen in @tbl-negative-NA-py.
 
@@ -120,9 +126,9 @@ df_3 <- df_2[idx_hdl & idx_ldl, ] # Here we remove 2 values.
 print(paste("Number of patients after removing negative and NA values: ", nrow(df_3)))
 ```
 
-### Outliers
+## Outliers
 
-Outliers were identified using a threshold of three standard deviations from the mean. For each numerical column in the dataset, we calculated the upper limit (@eq-outlier_1) and lower limit (@eq-outlier_2) as follows:
+Outliers were defined using a threshold of three standard deviations from the mean. For each numerical column in the dataset, we calculated the upper limit (@eq-outlier_1) and lower limit (@eq-outlier_2) as follows:
 
 $$\text{Upper Limit} = \text{mean} + 3 \times \text{SD}$$ {#eq-outlier_1}
 
@@ -151,31 +157,84 @@ df_4 <- df_3[clean_LDL & clean_HDL, ]
 sum(df_4$HDL == df_3$HDL)
 ```
 
-## Data exploration
+# Data exploration
+
+## Normalization and balance
+
+Although measurement units were not provided, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL) based on the magnitude of the numbers and a comparison with average population values reported by @tsao2023heart (\~111 mg/dL and \~53 mg/dL, respectively). All values in the dataset are biologically possible, though some are exceptionally rare. While literature ranges are often used to filter extreme values or check data quality, this strategy was not applied here given the fictional nature of the dataset.
+
+The HDL and LDL distributions were explored using histograms and Q-Q plots (@fig-qqplot-ldl & @fig-qqplot-hdl). The visualizations suggest that both variables follow a normal distribution (later confirmed by a statistical test); therefore, there was no need for data transformation. Finally, a cross-tabulation (@tbl-balance) confirmed that the comparison groups are balanced.
+
+## Comparing Categorical and Continuos Data
+
+The numerical variables (HDL and LDL) were grouped by Size and Planet and visualized using boxplots. There appeared to be no significant difference in LDL or HDL when grouping by planet; however, analyzing @fig-ldl-size and @fig-hdl-size suggests a notable trend when grouping by size, indicating a potential difference in HDL and LDL levels between tall and small individuals.
 
 ```{r}
-#| echo: false
-#| label: fig-boxplot_1
 #| include: false
-# Plot LDL grouped by Planets using the formula interface
+library(knitr)
+library(dplyr)
 
-# Groups LDL by Planet AND Size on the same x-axis
-# Split canvas into 1 row, 2 columns
-par(mfrow = c(1, 2)) 
-
-boxplot(LDL ~ Planet * Size, 
-        data = df_4, 
-        main = "LDL Levels by Planet and Size", 
-        col = c("#56B4E9", "#E69F00"), 
-        pch = 16)
-
-boxplot(HDL ~ Planet * Size, 
-        data = df_4, 
-        main = "HDL Levels by Planet and Size", 
-        col = c("#56B4E9", "#E69F00"), 
-        pch = 16)
-
+balance_table <- df_4 %>%
+  group_by(Planet, Size) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(Percent = round(100 * n / sum(n), 1))
 ```
+
+```{r}
+#| label: tbl-balance
+#| fig-cap: "Sample sizes by Planet and Size group"
+#| echo: false
+
+kable(balance_table, align = "c")
+```
+
+```{r}
+#| label: fig-hts-1
+#| fig-cap: "Histogram of LDL levels"
+#| include: false
+#| fig-width: 5
+#| fig-height: 5
+
+hist(df_4$LDL,
+    main="")
+```
+
+```{r}
+#| label: fig-hts-2
+#| fig-cap: "Histogram of HDL levels"
+#| include: false
+#| fig-width: 5
+#| fig-height: 5
+
+hist(df_4$HDL,
+    main="")
+```
+
+```{r}
+#| label: fig-qqplot-ldl
+#| fig-cap: "Q-Q Plot of LDL levels"
+#| echo: false
+#| fig-width: 4
+#| fig-height: 4
+
+qqnorm(df_4$LDL, pch = 1, frame = FALSE, main="")
+qqline(df_4$LDL, col = "steelblue", lwd = 2)
+```
+
+```{r}
+#| label: fig-qqplot-hdl
+#| fig-cap: "Q-Q Plot of HDL levels"
+#| echo: false
+#| fig-width: 4
+#| fig-height: 4
+
+qqnorm(df_4$HDL, pch = 1, frame = FALSE, main="")
+qqline(df_4$HDL, col = "steelblue", lwd = 2)
+```
+
+## Comparing Continuos Data
+
+To explore the correlation between the continuous variables, LDL and HDL, a scatterplot was created (@fig-scatterplot_1), using color to indicate Size (Tall or Small) and shape for Planet (Earth and Venus). The plot reveals a negative trend: regardless of planet, small patients tend to have lower LDL and higher HDL levels, while the inverse is true for tall individuals.
 
 ```{r}
 #| label: fig-ldl-size
@@ -200,6 +259,38 @@ boxplot(LDL ~ Size,
 #| label: fig-hdl-size
 #| fig-cap: "B. HDL levels by Size group"
 #| echo: false
+#| fig-width: 5
+#| fig-height: 5
+boxplot(HDL ~ Size, 
+        data = df_4, 
+        col = group_colors,
+        density = c(25, 70), 
+        pch = 16,
+        ylab = "HDL")
+```
+
+```{r}
+#| label: fig-ldl-planet
+#| fig-cap: "LDL levels by Planet group"
+#| include: false
+#| fig-width: 5
+#| fig-height: 5
+
+# Colorblind-friendly palette (Okabe-Ito), one color per Size group
+group_colors <- c("Small" = "#E69F00", "Tall" = "#56B4E9")
+
+boxplot(LDL ~ Size, 
+        data = df_4, 
+        col = group_colors,
+        density = c(25, 70),   # different shading density = second visual cue, not just color
+        pch = 16,
+        ylab = "LDL")
+```
+
+```{r}
+#| label: fig-hdl-planet
+#| fig-cap: "HDL levels by Planet group"
+#| include: false
 #| fig-width: 5
 #| fig-height: 5
 boxplot(HDL ~ Size, 
@@ -240,9 +331,17 @@ legend("topright",
 write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = FALSE)
 ```
 
-## Statistics used to validate associations.
+# Statistics used to validate associations
 
-### (a) 1 analysis of 2 continuous variables
+## Normality Analysis
+
+Shapiro-Wilk was used to analyze normality in this set due to its size (398 samples \< 5000) [@royston1982extension].
+
+## 1 Analysis of 2 Continuous Variables
+
+@fig-scatterplot_1 suggested a potential negative correlation between HDL and LDL. To formally evaluate this relationship, the normality of both variables was first assessed using the Shapiro-Wilk test (@tbl-normality). The results for both variables yielded $p-values \> 0.05$, failing to reject the null hypothesis. Because the assumption of normality was met, Pearson's parametric correlation test was selected to analyze the data.
+
+The test revealed a strong negative correlation between the two variables (Pearson's $r = -0.745$, $p = 1.24e-71$). Given this highly significant p-value, we can confidently conclude that as HDL levels increase, LDL levels tend to decrease. This inverse relationship is an expected result that is supported by existing literature.
 
 ```{python, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-normality
@@ -252,8 +351,9 @@ write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = 
 ## IMPORTING DATA
 import pandas as pd
 from scipy.stats import shapiro, pearsonr, spearmanr
+from pyprojroot import here
 
-df = pd.read_csv('../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv')
+df = pd.read_csv(here("data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv"))
 data = df.copy()
 
 ## ANALYSIS
@@ -279,7 +379,7 @@ normality_table.style.format({'Statistic': '{:.3f}', 'p-value': '{:.2e}'}).hide(
 ```{python}
 #| label: tbl-correlation
 #| tbl-cap: "Correlation between HDL and LDL"
-#| echo: false
+#| include: false
 
 if shapiro_HDL.pvalue > 0.05 and shapiro_LDL.pvalue > 0.05:
     method = 'Pearson'
@@ -298,7 +398,13 @@ correlation_table.style.format({'Correlation coefficient': '{:.3f}', 'p-value': 
 
 ```
 
-### (b) 1 analysis of 1 continuous variable vs 1 categorical variable.
+## 1 Analysis of 1 Continuous Variable vs 1 Categorical Variable.
+
+As discussed before, a initial visual inspection of @fig-ldl-size and @fig-hdl-size suggested an apparent difference in HDL and LDL levels between tall and small individuals, regardless of planet. To statistically corroborate these observations, the data was grouped first by Size, and subsequently by Planet.
+
+To determine the appropriate statistical comparison, each subset was evaluated for normality using the Shapiro-Wilk test. All groups yielded a $p-value \> 0.05$, thereby failing to reject the null hypothesis: data follows a normal distribution. Consequently, parametric independent Welch T-tests were chosen over the non-parametric Kruskal-Wallis test for group comparisons, as detailed in @tbl-normality-groups.
+
+As suspected, the T-test results comparing the mean differences of HDL and LDL grouped by Size (tall vs. small) yielded highly significant p-values ($p \< 0.001$), firmly rejecting the null hypothesis of equal means. Conversely, this significant difference is entirely absent when grouping HDL or LDL by Planet ($p \> 0.05$). Therefore, we can conclude that physical size, rather than planetary origin, is the primary driver of the differences observed among these groups.
 
 ```{python, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-normality-groups
@@ -406,3 +512,5 @@ comparison_table["Conclusion"] = comparison_table["Conclusion"].replace({
     ])
 )
 ```
+
+# References
