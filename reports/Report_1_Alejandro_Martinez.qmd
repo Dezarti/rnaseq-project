@@ -38,7 +38,7 @@ df_1 <- read.csv(here("data", "Part_1", "DATA_SET_REFERENCE_EVAL.csv"), row.name
 
 ```{r, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-summary-py
-#| tbl-cap: "Fictional Data-Set. First 6 entries"
+#| tbl-cap: "Fictional Data-Set. First 3 entries"
 #| echo: false
 #head(df_1) # Check data
 knitr::kable(head(df_1, n = 3L))
@@ -163,9 +163,9 @@ sum(df_4$HDL == df_3$HDL)
 
 Although measurement units were not provided, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL) based on the magnitude of the numbers and a comparison with average population values reported by @tsao2023heart (\~111 mg/dL and \~53 mg/dL, respectively). All values in the dataset are biologically possible, though some are exceptionally rare. While literature ranges are often used to filter extreme values or check data quality, this strategy was not applied here given the fictional nature of the dataset.
 
-The HDL and LDL distributions were explored using histograms and Q-Q plots (@fig-qqplot-ldl & @fig-qqplot-hdl). The visualizations suggest that both variables follow a normal distribution (later confirmed by a statistical test); therefore, there was no need for data transformation. Finally, a cross-tabulation (@tbl-balance) confirmed that the comparison groups are balanced.
+The HDL and LDL distributions were explored using histograms and Q-Q plots; only the Q-Q plots are shown here for brevity (@fig-qqplot-ldl & @fig-qqplot-hdl). The visualizations suggest that both variables follow a normal distribution (later confirmed by a statistical test); therefore, there was no need for data transformation. Finally, a cross-tabulation (@tbl-balance) confirmed that the comparison groups are balanced.
 
-## Comparing Categorical and Continuos Data
+## Comparing Categorical and Continuous Data
 
 The numerical variables (HDL and LDL) were grouped by Size and Planet and visualized using boxplots. There appeared to be no significant difference in LDL or HDL when grouping by planet; however, analyzing @fig-ldl-size and @fig-hdl-size suggests a notable trend when grouping by size, indicating a potential difference in HDL and LDL levels between tall and small individuals.
 
@@ -179,7 +179,6 @@ balance_table <- df_4 %>%
   summarise(n = n(), .groups = "drop") %>%
   mutate(Percent = round(100 * n / sum(n), 1))
 ```
-
 ```{r}
 #| label: tbl-balance
 #| fig-cap: "Sample sizes by Planet and Size group"
@@ -187,7 +186,6 @@ balance_table <- df_4 %>%
 
 kable(balance_table, align = "c")
 ```
-
 ```{r}
 #| label: fig-hts-1
 #| fig-cap: "Histogram of LDL levels"
@@ -195,10 +193,10 @@ kable(balance_table, align = "c")
 #| fig-width: 5
 #| fig-height: 5
 
+par(mar = c(4, 4, 1, 1) + 0.1)
 hist(df_4$LDL,
     main="")
 ```
-
 ```{r}
 #| label: fig-hts-2
 #| fig-cap: "Histogram of HDL levels"
@@ -206,10 +204,10 @@ hist(df_4$LDL,
 #| fig-width: 5
 #| fig-height: 5
 
+par(mar = c(4, 4, 1, 1) + 0.1)
 hist(df_4$HDL,
     main="")
 ```
-
 ```{r}
 #| label: fig-qqplot-ldl
 #| fig-cap: "Q-Q Plot of LDL levels"
@@ -217,10 +215,13 @@ hist(df_4$HDL,
 #| fig-width: 4
 #| fig-height: 4
 
+par(mar = c(4, 4, 1, 1) + 0.1)
 qqnorm(df_4$LDL, pch = 1, frame = FALSE, main="")
 qqline(df_4$LDL, col = "steelblue", lwd = 2)
 ```
+## Comparing Continuous Data
 
+To explore the correlation between the continuous variables, LDL and HDL, a scatterplot was created (@fig-scatterplot_1), using color to indicate Size (Tall or Small) and shape for Planet (Earth and Venus). The plot reveals a negative trend: regardless of planet, small patients tend to have lower LDL and higher HDL levels, while the inverse is true for tall individuals.
 ```{r}
 #| label: fig-qqplot-hdl
 #| fig-cap: "Q-Q Plot of HDL levels"
@@ -228,13 +229,10 @@ qqline(df_4$LDL, col = "steelblue", lwd = 2)
 #| fig-width: 4
 #| fig-height: 4
 
+par(mar = c(4, 4, 1, 1) + 0.1)
 qqnorm(df_4$HDL, pch = 1, frame = FALSE, main="")
 qqline(df_4$HDL, col = "steelblue", lwd = 2)
 ```
-
-## Comparing Continuos Data
-
-To explore the correlation between the continuous variables, LDL and HDL, a scatterplot was created (@fig-scatterplot_1), using color to indicate Size (Tall or Small) and shape for Planet (Earth and Venus). The plot reveals a negative trend: regardless of planet, small patients tend to have lower LDL and higher HDL levels, while the inverse is true for tall individuals.
 
 ```{r}
 #| label: fig-ldl-size
@@ -246,8 +244,9 @@ To explore the correlation between the continuous variables, LDL and HDL, a scat
 # Colorblind-friendly palette (Okabe-Ito), one color per Size group
 group_colors <- c("Small" = "#E69F00", "Tall" = "#56B4E9")
 
-boxplot(LDL ~ Size, 
-        data = df_4, 
+par(mar = c(4, 4, 1, 1) + 0.1)
+boxplot(LDL ~ Size,
+        data = df_4,
         col = group_colors,
         density = c(25, 70),   # different shading density = second visual cue, not just color
         pch = 16,
@@ -255,16 +254,23 @@ boxplot(LDL ~ Size,
 
 ```
 
+# Statistics used to validate associations
+
+## Normality Analysis
+
+Shapiro-Wilk was used to analyze normality in this set due to its size (398 samples \< 5000) [@royston1982extension]. All the results were compared and validated with histograms and Q-Q plots (only the latter are shown in this report for brevity).
+
 ```{r}
 #| label: fig-hdl-size
-#| fig-cap: "B. HDL levels by Size group"
+#| fig-cap: "HDL levels by Size group"
 #| echo: false
 #| fig-width: 5
 #| fig-height: 5
-boxplot(HDL ~ Size, 
-        data = df_4, 
+par(mar = c(4, 4, 1, 1) + 0.1)
+boxplot(HDL ~ Size,
+        data = df_4,
         col = group_colors,
-        density = c(25, 70), 
+        density = c(25, 70),
         pch = 16,
         ylab = "HDL")
 ```
@@ -279,8 +285,9 @@ boxplot(HDL ~ Size,
 # Colorblind-friendly palette (Okabe-Ito), one color per Size group
 group_colors <- c("Small" = "#E69F00", "Tall" = "#56B4E9")
 
-boxplot(LDL ~ Size, 
-        data = df_4, 
+par(mar = c(4, 4, 1, 1) + 0.1)
+boxplot(LDL ~ Planet,
+        data = df_4,
         col = group_colors,
         density = c(25, 70),   # different shading density = second visual cue, not just color
         pch = 16,
@@ -293,10 +300,11 @@ boxplot(LDL ~ Size,
 #| include: false
 #| fig-width: 5
 #| fig-height: 5
-boxplot(HDL ~ Size, 
-        data = df_4, 
+par(mar = c(4, 4, 1, 1) + 0.1)
+boxplot(HDL ~ Planet,
+        data = df_4,
         col = group_colors,
-        density = c(25, 70), 
+        density = c(25, 70),
         pch = 16,
         ylab = "HDL")
 ```
@@ -306,14 +314,15 @@ boxplot(HDL ~ Size,
 #| label: fig-scatterplot_1
 #| fig-cap: "HDL vs LDL by Size (color) and Planet (shape)"
 #| fig-width: 5
-#| fig-height: 6
-# Comparing two continuos values
+#| fig-height: 5
+# Comparing two continuous values
 df_4$Group <- interaction(df_4$Planet, df_4$Size, sep = "-") # Combined group factor
 # Levels will be: Earth-Small, Venus-Small, Earth-Tall, Venus-Tall (alphabetical/factor order)
 group_levels <- levels(df_4$Group)
 cb_colors <- c("#E69F00", "#0072B2")  # for Size: Small, Tall
 shapes <- c(16, 17)                    # for Planet: Earth = circle, Venus = triangle
 
+par(mar = c(4, 4, 1, 1) + 0.1)
 plot(df_4$LDL, df_4$HDL,
      col = cb_colors[as.factor(df_4$Size)],
      pch = shapes[as.factor(df_4$Planet)],
@@ -331,21 +340,15 @@ legend("topright",
 write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = FALSE)
 ```
 
-# Statistics used to validate associations
-
-## Normality Analysis
-
-Shapiro-Wilk was used to analyze normality in this set due to its size (398 samples \< 5000) [@royston1982extension]. All the results were compare and validated with histograms and Q-Q plots.
-
 ## Statistical Tests
 
-Due to the samples number that causes a low loss in statistical power, to evaluate difference between comparative groups Welch's two-sample t-test was perfomed over the traditional Student's t-test.
+Due to the samples number that causes a low loss in statistical power, to evaluate difference between comparative groups Welch's two-sample t-test was performed over the traditional Student's t-test.
 
-## 1 Analysis of 2 Continuous Variables
+## One Analysis of Two Continuous Variables
 
-@fig-scatterplot_1 suggested a potential negative correlation between HDL and LDL. To formally evaluate this relationship, the normality of both variables was first assessed using the Shapiro-Wilk test (@tbl-normality). The results for both variables yielded $p-values \> 0.05$, failing to reject the null hypothesis. Because the assumption of normality was met, Pearson's parametric correlation test was selected to analyze the data.
+@fig-scatterplot_1 suggested a potential negative correlation between HDL and LDL. To formally evaluate this relationship, the normality of both variables was first assessed using the Shapiro-Wilk test (@tbl-normality). The results for both variables yielded $p-values > 0.05$, failing to reject the null hypothesis. Because the assumption of normality was met, Pearson's parametric correlation test was selected to analyze the data.
 
-The test revealed a strong negative correlation between the two variables (Pearson's $r = -0.745$, $p = 1.24e-71$). Given this highly significant p-value, we can confidently conclude that as HDL levels increase, LDL levels tend to decrease. This inverse relationship is an expected result that is supported by existing literature.
+The test revealed a strong negative correlation between the two variables (Pearson's $r = -0.745$, $p = 1.24e-71$), and the small p-value confirms this is very unlikely to be due to chance. This inverse relationship doesn't imply causation, but is an expected result that is supported by existing literature [@burgess2014using].
 
 ```{python, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-normality
@@ -402,13 +405,13 @@ correlation_table.style.format({'Correlation coefficient': '{:.3f}', 'p-value': 
 
 ```
 
-## 1 Analysis of 1 Continuous Variable vs 1 Categorical Variable.
+## One Analysis of One Continuous Variable vs One Categorical Variable
 
-As discussed before, a initial visual inspection of @fig-ldl-size and @fig-hdl-size suggested an apparent difference in HDL and LDL levels between tall and small individuals, regardless of planet. To statistically corroborate these observations, the data was grouped first by Size, and subsequently by Planet.
+As discussed before, an initial visual inspection of @fig-ldl-size and @fig-hdl-size suggested an apparent difference in HDL and LDL levels between tall and small individuals, regardless of planet. To statistically corroborate these observations, the data was grouped first by Size, and subsequently by Planet.
 
-To determine the appropriate statistical comparison, each subset was evaluated for normality using the Shapiro-Wilk test. All groups yielded a $p-value \> 0.05$, thereby failing to reject the null hypothesis: data follows a normal distribution. Consequently, parametric independent Welch T-tests were chosen over the non-parametric Kruskal-Wallis test for group comparisons, as detailed in @tbl-normality-groups.
+To determine the appropriate statistical comparison, each subset was evaluated for normality using the Shapiro-Wilk test. All groups yielded a $p-value > 0.05$, thereby failing to reject the null hypothesis: data follows a normal distribution (@tbl-normality-groups). Consequently, parametric independent Welch T-tests were chosen over the non-parametric Kruskal-Wallis test for group comparisons, as detailed in @tbl-comparison-groups.
 
-As suspected, the T-test results comparing the mean differences of HDL and LDL grouped by Size (tall vs. small) yielded highly significant p-values ($p \< 0.001$), firmly rejecting the null hypothesis of equal means. Conversely, this significant difference is entirely absent when grouping HDL or LDL by Planet ($p \> 0.05$). Therefore, we can conclude that physical size, rather than planetary origin, is the primary driver of the differences observed among these groups.
+As suspected, the T-test results comparing the mean differences of HDL and LDL grouped by Size (tall vs. small) yielded highly significant p-values ($p < 0.001$), firmly rejecting the null hypothesis of equal means. Conversely, this significant difference is entirely absent when grouping HDL or LDL by Planet ($p > 0.05$). Therefore, we can conclude that physical size, rather than planetary origin, is the primary driver of the differences observed among these groups.
 
 ```{python, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-normality-groups
