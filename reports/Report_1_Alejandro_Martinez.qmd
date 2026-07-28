@@ -335,7 +335,11 @@ write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = 
 
 ## Normality Analysis
 
-Shapiro-Wilk was used to analyze normality in this set due to its size (398 samples \< 5000) [@royston1982extension].
+Shapiro-Wilk was used to analyze normality in this set due to its size (398 samples \< 5000) [@royston1982extension]. All the results were compare and validated with histograms and Q-Q plots.
+
+## Statistical Tests
+
+Due to the samples number that causes a low loss in statistical power, to evaluate difference between comparative groups Welch's two-sample t-test was perfomed over the traditional Student's t-test.
 
 ## 1 Analysis of 2 Continuous Variables
 
