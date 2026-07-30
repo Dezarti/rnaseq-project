@@ -1,22 +1,17 @@
-# Ignore raw and processed data
+# Ignore regenerable intermediate data
 data/Part_2/processed/
-codes/Part_2/
-back-up.csv
-test.R
 
 
-# Before finishing the files
-Reports/Report_2_Alejandro_Martinez.qmd
-Reports/Report_2_Alejandro_Martinez.pdf
-
+# Ignore Quarto build caches
 .quarto/
 
 # Ignore configuration of interpreter
 .vscode/
 
-# Ignore R and Python cache files
+# Ignore R and Python cache/artifact files
 .Rhistory
 .RData
 .Ruserdata
+Rplots.pdf
 __pycache__/
 .ipynb_checkpoints/

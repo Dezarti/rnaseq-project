@@ -512,4 +512,3 @@ dependencies:
   - zipp=4.1.0
   - zlib-ng=2.3.3
   - zstd=1.5.7
-prefix: /home/alejandro/miniconda3/envs/rnaseq-project

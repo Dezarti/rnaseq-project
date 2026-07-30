@@ -1,0 +1,342 @@
+---
+title: "FINAL EVALUATION"
+subtitle: "PART 2: Analysis of RNA-seq or single-cell data-set | BESE-300"
+bibliography: references.bib
+citeproc: true
+author:
+  - name: "Alejandro Martinez Hernandez | KAUST ID: 219559"
+    affiliations:
+      - name: "King Abdullah University of Science and Technology"
+number-sections: true
+format:
+  typst:
+    columns: 2
+    fontsize: 10pt
+    margin:
+      top: 15mm
+      bottom: 15mm
+      left: 15mm
+      right: 15mm
+knitr:
+  opts_chunk:
+    fig.align: center
+editor: visual
+---
+
+```{=typst}
+#place(top + left, dy: -41.9mm, image("Alejandro_Martinez.jpg", width: 2.2cm))
+```
+# Description of Data: Curation and Exploration
+
+```{r}
+#| include: false
+library(here)
+library(knitr)
+library(limma)
+library(pheatmap)
+library(dplyr)
+
+# LOAD THE DATA
+df_1 <- read.csv(here("data", "Part_2", "GSE75417_STATegra.RNAseq.CQN.Combat.Annotated.positive_2014_09.csv"))
+df_1_2 <- read.csv(here("data", "Part_2", "GSE75417_STATegra.RNAseq.CQN.Combat.Annotated.positive_2014_09.csv"), row.names = 1)
+df_2 <- df_1_2[, -1] # removing gene names, numeric matrix only
+```
+
+The present report analyzes the series GSE75417, part of the STATegra dataset [@gomez2019stategra]. The dataset consists of the gene expression (based on RNA-seq) of B3 cell differentiation in mice, divided into two groups: Control (Ctr) and treated with Tamoxifen for Ikaros induction (Ik) across 6 time points (0, 2, 6, 12, 18, and 24 hours).
+
+The raw file consists of 38 columns and 12762 rows, where each row represents a gene and each column a sample. The first column contains the ID, the second the MGI (Mouse Genome Informatics) gene symbol (261 not available), while the rest of the columns contain the expression values for each sample (@tbl-data).
+
+```{r}
+#| label: tbl-data
+#| tbl-cap: "Data-Set (first 3 rows and columns)"
+#| echo: false
+
+df_1 %>%
+  select(1:3) %>%    # first 3 columns
+  slice(1:3) %>%     # first 3 rows
+  kable()
+```
+
+As seen in @fig-boxplot_1, there are no negative values, the minimum value is approximately 1, the maximum is approximately 22 (log-transformed), and every column possesses a similar median (around 11) and spread (normalized). Terms inside the filename give us more information about the preprocessing, like CQN (Conditional Quantile Normalization) and ComBat (to remove batch effects). For this particular case, after checking the documentation and taking into account the data origin, we can assume that the data was properly cleaned of low-expressed genes, abnormal samples/errors, and batch effects, and that it has been log-transformed and normalized.
+
+```{r}
+#| label: fig-boxplot_1
+#| fig-cap: "Normalized expression, 36 samples"
+#| echo: false
+par(mar = c(2, 3.2, 0.5, 0.5))
+boxplot(df_2, xlab = "", ylab = "", xaxt = "n")
+mtext("log2 expression", side = 2, line = 2, cex = 0.7, las = 0)
+```
+
+## Quality Control: Experimental Design and Principal Component Analysis
+
+```{r}
+#| include: false
+
+mat <- as.matrix(df_1_2[, -1]) # numeric expression matrix (drops MGI_Symbol column)
+
+## Parsing the experimental design out of the sample names:
+## Batch_{1..4}_{Ctr|Ik}_{0,2,6,12,18,24}H
+name_parts <- do.call(rbind, strsplit(colnames(mat), "_"))
+batch <- factor(name_parts[, 2])
+cond <- factor(name_parts[, 3], levels = c("Ctr", "Ik")) # Ctr = reference level
+time <- factor(sub("H", "", name_parts[, 4]), levels = c("0", "2", "6", "12", "18", "24"))
+meta <- data.frame(sample = colnames(mat), batch = batch, cond = cond, time = time,
+                    row.names = colnames(mat))
+
+## Cell-means design, reused by the differential expression model below
+group <- factor(paste(cond, time, sep = "_"),
+                 levels = paste(rep(c("Ctr", "Ik"), each = 6),
+                                 c("0", "2", "6", "12", "18", "24"), sep = "_"))
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+
+## Colors reused by the PCA and expression plots
+time_colors <- c("0" = "#000000", "2" = "#E69F00", "6" = "#56B4E9",
+                  "12" = "#009E73", "18" = "#D55E00", "24" = "#CC79A7")
+cond_colors <- c("Ctr" = "#56B4E9", "Ik" = "#D55E00")
+```
+
+Among the columns, every sample name encodes the batch, condition, and time point (e.g., Batch_1_Ctr_0H). The design is unbalanced: batch 2 is only present at time 0H, while batch 3 is missing at 0H but present for the other time points. However, every condition maintains 3 replicates (@tbl-design).
+
+```{python}
+#| label: tbl-design
+#| tbl-cap: "Experiment design"
+#| echo: false
+
+import pandas as pd
+
+# Sample names encode batch and timepoint: Batch_{1..4}_{Ctr|Ik}_{time}H
+values = [
+    "Batch_1_Ctr_0H", "Batch_2_Ctr_0H", "Batch_4_Ctr_0H", "Batch_1_Ctr_2H", 
+    "Batch_3_Ctr_2H", "Batch_4_Ctr_2H", "Batch_1_Ctr_6H", "Batch_3_Ctr_6H", 
+    "Batch_4_Ctr_6H", "Batch_1_Ctr_12H", "Batch_3_Ctr_12H", "Batch_4_Ctr_12H", 
+    "Batch_1_Ctr_18H", "Batch_3_Ctr_18H", "Batch_4_Ctr_18H", "Batch_1_Ctr_24H", 
+    "Batch_3_Ctr_24H", "Batch_4_Ctr_24H", "Batch_1_Ik_0H", "Batch_2_Ik_0H", 
+    "Batch_4_Ik_0H", "Batch_1_Ik_2H", "Batch_3_Ik_2H", "Batch_4_Ik_2H", 
+    "Batch_1_Ik_6H", "Batch_3_Ik_6H", "Batch_4_Ik_6H", "Batch_1_Ik_12H", 
+    "Batch_3_Ik_12H", "Batch_4_Ik_12H", "Batch_1_Ik_18H", "Batch_3_Ik_18H", 
+    "Batch_4_Ik_18H", "Batch_1_Ik_24H", "Batch_3_Ik_24H", "Batch_4_Ik_24H"
+]
+
+# Extract the Batch and Time components from each sample name
+parsed_data = [
+    {"Batch": int(val.split('_')[1]), "Time": val.split('_')[3]}
+    for val in values
+]
+df = pd.DataFrame(parsed_data)
+
+# Cross-tabulate: number of samples per Batch x Time combination
+compact_df = pd.crosstab(df['Batch'], df['Time'])
+
+# Order columns chronologically
+time_order = ['0H', '2H', '6H', '12H', '18H', '24H']
+compact_df = compact_df.reindex(columns=time_order, fill_value=0)
+
+# Mark present combinations with 'X'
+compact_df = compact_df.map(lambda x: 'X' if x > 0 else '')
+compact_df.reset_index(inplace=True)
+
+compact_df.style.format().hide(axis='index')
+```
+
+As we have many variables, a PCA of all 36 samples—colored by time and shaped by condition—was created to visually check the formation of groups. As expected, in @fig-pca we note that all the control dots are grouped together at the bottom left corner, mainly varying along the second principal component (10.6%), indicating that there are no major transcriptomic differences among the control samples over time (uninduced B3 cells should not differentiate). When analyzing the treatment group (IK), it is easy to divide most of the time points into subgroups by their distance along the first principal component (46.8%). This means that for the IK group, as time progressed and the cells matured, their gene expression profiles became increasingly distinct. This confirms that we will be able to distinguish the biomarkers involved in the differentiation of B-cells. Furthermore, because the samples group by biological conditions rather than batches, we can assume that the preprocessing of the dataset using ComBat was successful and the data is of high quality.
+
+```{r}
+#| label: fig-pca
+#| fig-cap: "PCA of all 36 samples, colored by time, shaped by condition"
+#| echo: false
+#| fig-width: 4
+#| fig-height: 3
+
+pca_result <- prcomp(t(mat), center = TRUE, scale. = FALSE)
+variance <- summary(pca_result)$importance[2, ] * 100
+pc1_label <- paste0("PC1 (", round(variance[1], 1), "%)")
+pc2_label <- paste0("PC2 (", round(variance[2], 1), "%)")
+
+point_colors <- time_colors[as.character(meta$time)]
+point_shapes <- ifelse(meta$cond == "Ctr", 16, 17)
+
+par(mar = c(3.2, 3.2, 0.5, 0.5))
+plot(pca_result$x[, 1], pca_result$x[, 2],
+     col = point_colors, pch = point_shapes, cex = 1.1,
+     xlab = "", ylab = "", cex.axis = 0.75,
+     bty = "l", las = 1)
+mtext(pc1_label, side = 1, line = 2, cex = 0.7, las = 0)
+mtext(pc2_label, side = 2, line = 2, cex = 0.7, las = 0)
+
+legend("topright", title = "Time", legend = paste0(levels(meta$time), "H"),
+       col = time_colors, pch = 15, pt.cex = 0.9, bty = "n", cex = 0.6)
+legend("topleft", title = "Cond.", legend = levels(meta$cond),
+       pch = c(16, 17), col = "black", pt.cex = 0.9, bty = "n", cex = 0.6)
+```
+
+# Description of Statistics Used to Validate Associations
+
+Because the dataset consists of three replicates per condition and the expression values were preprocessed into a log-scale matrix (via CQN and ComBat) rather than raw counts, traditional count-based differential expression tools like DESeq2 or NOISeq were not appropriate. Instead, limma [@ritchie2015limma] was utilized to fit a linear model to the expression data of each gene. To compare the 24H and 0H time points directly, a specific contrast was applied to the model. Statistical significance was calculated using limma's Empirical Bayes method, useful in this case due to the small sample sizes.
+
+```{r}
+#| include: false
+library(limma)
+library(knitr)
+
+## Contrast: mature Ik (24H) vs immature Ik (0H)
+contrast_matrix <- makeContrasts(
+  Maturation = Ik_24 - Ik_0,
+  levels = design
+)
+
+## Fit the linear model and apply the contrast
+fit <- lmFit(mat, design)
+fit_contrasts <- contrasts.fit(fit, contrast_matrix)
+
+## Empirical Bayes moderation of the variance estimates
+fit_ebayes <- eBayes(fit_contrasts)
+
+## Top 20 markers for the Maturation contrast, BH-adjusted
+top_markers <- topTable(fit_ebayes, coef = "Maturation", number = 20,
+                        sort.by = "P", adjust.method = "BH")
+top_markers$Gene_Name <- df_1_2$MGI_Symbol[match(rownames(top_markers), rownames(df_1_2))]
+```
+
+## Differential Expression Model
+
+The top biomarkers were sorted by adjusted p-value in order to filter out background noise and focus mainly on the genes we are most certain changed. The resulting analysis yielded the top 10 most statistically significant differentiation markers, as seen in @tbl-markers. The log2FC (Log2 Fold Change) column indicates the magnitude and direction of the change; a positive value represents upregulation at 24H, while a negative value represents downregulation. Because the scale is logarithmic (base 2), a log2FC of 3 translates to an 8-fold change in actual expression. Notably, nine of the top ten markers are heavily upregulated, indicating a massive activation of genetic networks during B-cell maturation. Genes such as Dok3 (Downstream of kinase 3) and Tifa (TRAF-interacting protein with a FHA domain) display log2FC values of 3.67 and 4.61, meaning their expression levels increased approximately 13 and 24-fold, respectively. This is expected, as there are reports of these genes being involved in B-cell signaling and differentiation [@loh2020emerging; @fu2026tifa].
+
+```{r}
+#| label: tbl-markers
+#| tbl-cap: "Top differentiation markers (24H vs 0H)"
+#| echo: false
+
+## Top 10 markers, columns rounded for display
+markers_display <- head(top_markers[, c("Gene_Name", "logFC", "t", "adj.P.Val")], 10)
+markers_display$logFC <- round(markers_display$logFC, 2)
+markers_display$t <- round(markers_display$t, 2)
+markers_display$adj.P.Val <- formatC(markers_display$adj.P.Val, format = "e", digits = 1)
+
+kable(markers_display,
+      row.names = FALSE,
+      col.names = c("Gene", "log2FC(24H)", "t", "adj.P"))
+```
+
+To corroborate these statistical results, a volcano plot was created to visualize the differential expression of all genes between 24H and 0H (@fig-volcano). The x-axis represents the log2 fold change, while the y-axis represents the -log10 of the adjusted p-value. We can see that nine of the top ten markers are located in the extreme upper-right quadrant, visualizing them as the most statistically significant upregulated genes. Conversely, Ass1 is clearly visible in the upper-left quadrant as a highly significant downregulated marker. Furthermore, the heatmap of these top 10 markers (@fig-heatmap) demonstrates perfect sample clustering. The dendrogram groups the upregulated genes tightly with the 24H IK samples, while the single downregulated gene (Ass1) shows high expression exclusively in the control and 0H IK samples.
+
+```{r}
+#| label: fig-volcano
+#| fig-cap: "Differential Expression: 24H vs 0H Maturation"
+#| echo: false
+#| fig-width: 3.4
+#| fig-height: 4.2
+
+## Full gene list for the Maturation contrast
+res <- topTable(fit_ebayes, coef = "Maturation", number = Inf, sort.by = "P", adjust.method = "BH")
+res$Gene_Name <- df_1_2$MGI_Symbol[match(rownames(res), rownames(df_1_2))]
+
+## Color by significance and direction (logFC > 1 / < -1, adj.P.Val < 0.05)
+res$Color <- "gray80"
+res$Color[res$logFC > 1 & res$adj.P.Val < 0.05] <- "#EE6677" # Up
+res$Color[res$logFC < -1 & res$adj.P.Val < 0.05] <- "#4477AA" # Down
+
+par(mar = c(3.2, 3.2, 1.2, 0.5))
+ylim_top <- max(-log10(res$P.Value)) * 1.15 # headroom for labels above the top points
+plot(res$logFC, -log10(res$P.Value),
+     ylim = c(0, ylim_top),
+     pch = 16,
+     cex = 0.6,
+     col = res$Color,
+     xlab = "",
+     ylab = "",
+     cex.axis = 0.75,
+     bty = "l",
+     las = 1)
+mtext("Log2 Fold Change", side = 1, line = 2, cex = 0.7)
+mtext("-log10(P-value)", side = 2, line = 2, cex = 0.7)
+mtext("Differential Expression: 24H vs 0H Maturation", side = 3, line = 0, cex = 0.65, font = 2)
+
+## Significance thresholds
+abline(v = c(-1, 1), col = "black", lty = 2)
+abline(h = -log10(0.05), col = "black", lty = 2)
+
+## Label the genes discussed in the text (Dok3, Tifa, Ass1); placement
+## is chosen by hand for each so the labels don't overlap each other
+genes_to_label <- c("Dok3", "Tifa", "Ass1")
+label_df <- res[match(genes_to_label, res$Gene_Name), ]
+text(x = label_df$logFC,
+     y = -log10(label_df$P.Value),
+     labels = label_df$Gene_Name,
+     pos = c(3, 1, 2), # Dok3 above, Tifa below, Ass1 left
+     cex = 0.6,
+     col = "black",
+     font = 4)
+```
+
+```{r}
+#| label: fig-heatmap
+#| fig-cap: "Top 10 markers: 0H vs 24H"
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6
+
+## Top 10 marker genes, restricted to the 0H and 24H samples
+top_10_ids <- rownames(head(top_markers, 10))
+heatmap_data <- mat[top_10_ids, ]
+rownames(heatmap_data) <- head(top_markers$Gene_Name, 10)
+
+cols_to_keep <- grepl("0H|24H", toupper(colnames(heatmap_data)))
+clean_heatmap_data <- heatmap_data[, cols_to_keep]
+
+library(pheatmap)
+my_colors <- colorRampPalette(c("#4477AA", "white", "#EE6677"))(50)
+
+pheatmap(clean_heatmap_data,
+         scale = "row",
+         color = my_colors,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         show_colnames = TRUE,
+         main = "Top 10 Markers: 0H vs 24H",
+         fontsize = 12)
+```
+
+## Positive Control
+
+Markers like Rag1 and Igll1 are well-known and highly useful for biologically validating the expression of other markers in B cells [@reynaud2008regulation]. As seen in @fig-expression, Igll1 (which is expressed predominantly in large pre-B cells) maintains its expression level throughout the entire experiment in the control group, but drops significantly in the treated cells. Conversely, Rag1 is heavily upregulated in the treated group, which is the expected behavior for transitioning small pre-B cells. The correct behavior of these positive controls confirms the biological validity of the experiment and the reliability of our novel biomarker discoveries. While the existence of alternative analytical approaches, such as a Difference-in-Differences (DiD) F-test, is acknowledged, the current approximation successfully highlights critical markers driving the differentiation process of B3 cells under tamoxifen induction.
+
+```{r}
+#| label: fig-expression
+#| fig-cap: "Expression Dynamics of Canonical Maturation Markers"
+#| echo: false
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+## Ensembl IDs for the genes of interest
+genes_to_plot <- c("Rag1", "Igll1")
+gene_ids <- rownames(df_1_2)[df_1_2$MGI_Symbol %in% genes_to_plot]
+names(gene_ids) <- genes_to_plot
+
+## Expression values for these genes, reshaped for ggplot2
+expr_data <- as.data.frame(t(mat[gene_ids, ]))
+colnames(expr_data) <- names(gene_ids)
+expr_data$Sample <- rownames(expr_data)
+
+plot_data <- expr_data %>%
+  pivot_longer(cols = c("Rag1", "Igll1"), names_to = "Gene", values_to = "Expression") %>%
+  mutate(
+    Condition = ifelse(grepl("Ik", Sample), "Ik", "Ctr"),
+    Time = as.numeric(gsub(".*_([0-9]+)H.*", "\\1", Sample))
+  )
+
+## Mean +/- SE expression over time, one panel per gene
+ggplot(plot_data, aes(x = Time, y = Expression, color = Condition, group = Condition)) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(fun = mean, geom = "point", size = 2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.5) +
+  facet_wrap(~Gene, scales = "free_y") +
+  theme_minimal() +
+  scale_color_manual(values = cond_colors) +
+  labs(x = "Time (H)", y = "Log Expression")
+```
+
+# References
