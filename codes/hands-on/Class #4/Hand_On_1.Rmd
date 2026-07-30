@@ -1,0 +1,96 @@
+---
+title: "Hand On 1"
+author: "Alejandro Martinez Hernandez"
+date: "2026-07-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Data Set 4B
+```{r, results='hide'}
+DATA4 <- read.csv("DATA_SET_REFERENCE_4_B.csv",row.names = 1)
+colnames(DATA4)
+class(DATA4)
+```
+
+## Review, clean and log transform "if and when necessary"
+```{r}
+sum(is.na(DATA4)) # Checking for NA
+```
+For the previous result, we know that there are 2 NA values. As eliminating them will cause data lost, we will work with them setting the function as na.rm=T
+
+```{r}
+boxplot(DATA4)
+boxplot(log10(DATA4))
+```
+
+From the previous graph, we might infer that we need to transform the data.
+As we need to run a t-test, we must be sure that the data follows a normal distribution and the variances are equal. It is expected that even after the log transformation some genes will be not normal distributed, and with not similar variance between the groups. 
+
+```{r}
+df_m <- as.matrix(DATA4)
+df_mlog <- log10(df_m) # Log transformation
+```
+
+
+## Conduct t.test between planets for each gene
+It is important to separate Earth data from Venus data to analyze the normality.
+Even though in class the Kolmogorov-Smirnov test was used, due to the amount of data point it was considered that Shapiro-Wilk will be more accurate. 
+
+To solve the issue of normality and variance between the data, for some data we used the standart t.test when possible, for others, the Kruskal.test.
+```{r}
+Design <- c(rep("Venus",80),rep("Earth",112))
+Earth<- Design =="Earth"
+Venus<- Design =="Venus"
+
+gauss_t.test <- function(df){
+  RESULTS <- matrix(NA,nrow(df),3)
+  rownames(RESULTS) <- rownames(df)
+  colnames(RESULTS) <- c("statistic","p-value","method")
+  alfa <- 0.05
+  
+  for(i in 1:nrow(df))
+  {
+    # Check gaussianity
+    pval_Gauss_Earth <- shapiro.test(na.omit(df[i, Earth]))$p.value
+    pval_Gauss_Venus <- shapiro.test(na.omit(df[i, Venus]))$p.value
+    
+    #pval_Gauss_Earth <- ks.test(df[i,Earth],pnorm, mean(df[i,Earth],na.rm=T), sd(df[i,Earth],na.rm=T))$p.value
+    
+    #pval_Gauss_Venus <- ks.test(df[i,Venus],pnorm,mean(df[i,Venus],na.rm=T), sd(df[i,Venus],na.rm=T))$p.value
+    
+    if(pval_Gauss_Earth > alfa & pval_Gauss_Venus > alfa)
+    {
+      ttres <- t.test(df[i,] ~ Design)
+      RESULTS[i,1] <- ttres$statistic
+      RESULTS[i,2] <- ttres$p.value
+      RESULTS[i,3] <- 0 #    
+    }else{
+      ksres <- kruskal.test(df[i,] ~ Design)
+      RESULTS[i,1] <- ksres$statistic
+      RESULTS[i,2] <- ksres$p.value
+      RESULTS[i,3] <- 1 #
+    }
+  }
+  return(RESULTS)
+}
+
+results <- gauss_t.test(df_mlog)
+
+```
+
+## Apply FDR (p.adjust function, BH) and estimate the # of differentially expressed genes with adjusted p-value < 0.01.
+```{r}
+Bonf_adjpvalues <- p.adjust(results[,2], method="bonferroni")
+sum(Bonf_adjpvalues<0.01)
+
+BH_adjpvalues <- p.adjust(results[,2],method="BH")
+sum(BH_adjpvalues<0.01)
+```
+From the previous results, we can check that the Bonferroni adjustment is slightly more strict than the BH one. 
+
+## Conclusion
+The number of deferentially expressed genes with adjusted p-value > 0.01 is around 198 and 199. 

@@ -1,0 +1,60 @@
+---
+title: "Day 2 - Hands On 2"
+author: "Alejandro Martinez Hernandez"
+date: "2026-07-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **Tutorial for running a linear model**
+Running a linear model in R involves a few simple steps:
+
+### 1. Importing the data
+In this case, we will use Dataset 3, which is stored in a CSV file.
+```{r}
+data <- read.table("DATA_SET_REFERENCE_3.csv", 
+                   header = TRUE,
+                   row.names = 1,
+                   sep=','
+)
+```
+
+### 2. Cleaning the data
+We need to remove illogical values (negative values, in this case) as well as outliers. The threshold for an outlier is defined as follows:
+
+$$\text{Outlier} = \text{median} \pm 3 \times \text{sd}$$
+```{r}
+## Load the function
+source("my_functions.R")
+
+## Use the cleaner
+data_f <- data_cleaner(data)
+head(data_f)
+```
+
+
+### 3.Creating the linear model
+We use the lm() function to define the relationship we want to analyze. For this exercise, we will try to explain Exercise levels based on LDL levels.
+```{r}
+linear_model <- lm(Exercise ~ LDL_levels, data_f)
+summary(linear_model)
+plot(linear_model)
+```
+
+
+### 4. Checking residual errors
+To validate our model, in addition to checking the p-values of the intercept $\beta_0$ and slope $\beta_1$ (both <2e-16 ), we must verify that the residuals follow a normal distribution. We can easily check this using the Shapiro-Wilk test on the model's residuals.
+```{r}
+test_n <- shapiro.test(residuals(linear_model))
+print(test_n)
+```
+
+
+### 5. Conclusion
+In this scenario, the p-values from the lm() output for $\beta_0 = 161.21222$ and $\beta_1 = 0.90699$ are extremely small (<2e-16), meaning both parameters are highly significant. Furthermore, the Shapiro-Wilk p-value for the residuals is relatively large (0.1571), so we cannot reject the assumption of normality. Based on this evidence, our model adequately explains the data.
+
+
+ 
