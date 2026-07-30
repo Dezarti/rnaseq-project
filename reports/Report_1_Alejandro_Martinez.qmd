@@ -64,7 +64,7 @@ print(paste("Number of small patients:", sum(df_1$Size == "Small", na.rm = TRUE)
 
 ## Overview
 
-- **Total Records***:* 400 patients.
+- **Total Records:** 400 patients.
 
 - **Locations:** Distributed nearly evenly across two planets (204 on Venus, 196 on Earth).
 
@@ -76,7 +76,7 @@ print(paste("Number of small patients:", sum(df_1$Size == "Small", na.rm = TRUE)
 
   - **HDL (High-Density Lipoprotein levels):** Numerical variable (mg/dL).
 
-  - **LDL (Low-Density Lipoprotein levels) :** Numerical variable (mg/dL).
+  - **LDL (Low-Density Lipoprotein levels):** Numerical variable (mg/dL).
 
   - **Size:** Categorical variable (Tall or Small).
 
@@ -97,7 +97,7 @@ knitr::kable(summary(df_1))
 
 ## Negative and NA values
 
-It was decided to remove each patient who has a negative or NA value. For this particular data-set, both negative and NA values for HDL and LDL corresponded to only 2 patients as seen in @tbl-negative-NA-py.
+It was decided to remove each patient who had a negative or NA value. For this particular data-set, both negative and NA values for HDL and LDL corresponded to only 2 patients as seen in @tbl-negative-NA-py.
 
 ```{r, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-negative-NA-py
@@ -163,9 +163,9 @@ sum(df_4$HDL == df_3$HDL)
 
 ## Normalization and balance
 
-Although measurement units were not provided, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL) based on the magnitude of the numbers and a comparison with average population values reported by @tsao2023heart (\~111 mg/dL and \~53 mg/dL, respectively). All values in the dataset are biologically possible, though some are exceptionally rare. While literature ranges are often used to filter extreme values or check data quality, this strategy was not applied here given the fictional nature of the dataset.
+Although measurement units were not provided, HDL and LDL are assumed to be in milligrams per deciliter (mg/dL) based on the magnitude of the numbers and a comparison with average population values reported by @tsao2023heart (\~53 mg/dL and \~111 mg/dL, respectively). All values in the dataset are biologically possible, though some are exceptionally rare. While literature ranges are often used to filter extreme values or check data quality, this strategy was not applied here given the fictional nature of the dataset.
 
-The HDL and LDL distributions were explored using histograms and Q-Q plots; only the Q-Q plots are shown here for brevity (@fig-qqplot-ldl & @fig-qqplot-hdl). The visualizations suggest that both variables follow a normal distribution (later confirmed by a statistical test); therefore, there was no need for data transformation. Finally, a cross-tabulation (@tbl-balance) confirmed that the comparison groups are balanced.
+The HDL and LDL distributions were explored using histograms and Q-Q plots; only the Q-Q plots are shown here for brevity (@fig-qqplot-ldl & @fig-qqplot-hdl). The visualizations suggest that both variables follow a normal distribution (later supported by a statistical test); therefore, there was no need for data transformation. Finally, a cross-tabulation (@tbl-balance) confirmed that the comparison groups are balanced.
 
 ## Comparing Categorical and Continuous Data
 
@@ -350,13 +350,13 @@ write.csv(df_4, "../data/Part_1/CLEAN_DATA_SET_REFERENCE_EVAL.csv", row.names = 
 
 ## Statistical Tests
 
-Due to the samples number that causes a low loss in statistical power, to evaluate difference between comparative groups Welch's two-sample t-test was performed over the traditional Student's t-test.
+Due to the number of samples, which causes only a low loss in statistical power, Welch's two-sample t-test was performed over the traditional Student's t-test to evaluate the differences between comparison groups.
 
 ## One Analysis of Two Continuous Variables
 
-@fig-scatterplot_1 suggested a potential negative correlation between HDL and LDL. To formally evaluate this relationship, the normality of both variables was first assessed using the Shapiro-Wilk test (@tbl-normality). The results for both variables yielded $p-values > 0.05$, failing to reject the null hypothesis. Because the assumption of normality was met, Pearson's parametric correlation test was selected to analyze the data.
+@fig-scatterplot_1 suggested a potential negative correlation between HDL and LDL. To formally evaluate this relationship, the normality of both variables was first assessed using the Shapiro-Wilk test (@tbl-normality). The results for both variables yielded $p > 0.05$, failing to reject the null hypothesis. Because the assumption of normality was met, Pearson's parametric correlation test was selected to analyze the data.
 
-The test revealed a strong negative correlation between the two variables (Pearson's $r = -0.745$, $p = 1.24e-71$), and the small p-value confirms this is very unlikely to be due to chance. This inverse relationship doesn't imply causation, but is an expected result that is supported by existing literature [@burgess2014using].
+The test revealed a strong negative correlation between the two variables (Pearson's $r = -0.745$, $p = 1.24 \times 10^{-71}$), and the small p-value confirms this is very unlikely to be due to chance. This inverse relationship doesn't imply causation, but is an expected result that is supported by existing literature [@burgess2014using].
 
 ```{python, error=FALSE, message=FALSE, warning=FALSE}
 #| label: tbl-normality
@@ -417,7 +417,7 @@ correlation_table.style.format({'Correlation coefficient': '{:.3f}', 'p-value': 
 
 As discussed before, an initial visual inspection of @fig-ldl-size and @fig-hdl-size suggested an apparent difference in HDL and LDL levels between tall and small individuals, regardless of planet. To statistically corroborate these observations, the data was grouped first by Size, and subsequently by Planet.
 
-To determine the appropriate statistical comparison, each subset was evaluated for normality using the Shapiro-Wilk test. All groups yielded a $p-value > 0.05$, thereby failing to reject the null hypothesis: data follows a normal distribution (@tbl-normality-groups). Consequently, parametric independent Welch T-tests were chosen over the non-parametric Kruskal-Wallis test for group comparisons, as detailed in @tbl-comparison-groups.
+To determine the appropriate statistical comparison, each subset was evaluated for normality using the Shapiro-Wilk test. All groups yielded $p > 0.05$, thereby failing to reject the null hypothesis: data follows a normal distribution (@tbl-normality-groups). Consequently, parametric independent Welch T-tests were chosen over the non-parametric Kruskal-Wallis test for group comparisons, as detailed in @tbl-comparison-groups.
 
 As suspected, the T-test results comparing the mean differences of HDL and LDL grouped by Size (tall vs. small) yielded highly significant p-values ($p < 0.001$), firmly rejecting the null hypothesis of equal means. Conversely, this significant difference is entirely absent when grouping HDL or LDL by Planet ($p > 0.05$). Therefore, we can conclude that physical size, rather than planetary origin, is the primary driver of the differences observed among these groups.
 
