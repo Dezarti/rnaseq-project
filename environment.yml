@@ -33,6 +33,7 @@ dependencies:
   - bioconductor-genomeinfodbdata=1.2.11
   - bioconductor-genomicranges=1.54.1
   - bioconductor-iranges=2.36.0
+  - bioconductor-limma=3.58.1
   - bioconductor-matrixgenerics=1.14.0
   - bioconductor-noiseq=2.46.0
   - bioconductor-s4arrays=1.2.0
@@ -246,6 +247,7 @@ dependencies:
   - pygments=2.20.0
   - pynndescent=0.5.13
   - pyparsing=3.3.2
+  - pyprojroot=0.3.0
   - pyside6=6.9.2
   - pysocks=1.7.1
   - python=3.11.15
@@ -404,6 +406,7 @@ dependencies:
   - r-selectr=0.4_2
   - r-snow=0.4_4
   - r-squarem=2021.1
+  - r-statmod=1.5.0
   - r-stringi=1.8.7
   - r-stringr=1.5.2
   - r-styler=1.10.3

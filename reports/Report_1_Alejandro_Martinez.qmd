@@ -6,8 +6,7 @@ citeproc: true
 author: 
   - name: "Alejandro Martinez Hernandez | KAUST ID: 219559"
     affiliations:
-      - name: "King Abdullah University of Science and Technology
-      "
+      - name: "King Abdullah University of Science and Technology"
 number-sections: true
 format: 
   typst:
@@ -24,6 +23,9 @@ knitr:
 editor: visual
 ---
 
+```{=typst}
+#place(top + left, dy: -41.9mm, image("Alejandro_Martinez.jpg", width: 3cm))
+```
 # Data-set used in the analysis
 
 The present work analyses the fictional data-set 'DATA_SET_REFERENCE_EVAL.csv', which presents 400 measurements of HDL and LDL in patients across two planets (Earth and Venus) from two populations (tall and small), as seen in @tbl-summary-py. No further information was given about the dataset due to it being fictional; nonetheless, in a real one, the source must be trustworthy with traceable methods.
@@ -179,6 +181,7 @@ balance_table <- df_4 %>%
   summarise(n = n(), .groups = "drop") %>%
   mutate(Percent = round(100 * n / sum(n), 1))
 ```
+
 ```{r}
 #| label: tbl-balance
 #| fig-cap: "Sample sizes by Planet and Size group"
@@ -186,6 +189,7 @@ balance_table <- df_4 %>%
 
 kable(balance_table, align = "c")
 ```
+
 ```{r}
 #| label: fig-hts-1
 #| fig-cap: "Histogram of LDL levels"
@@ -197,6 +201,7 @@ par(mar = c(4, 4, 1, 1) + 0.1)
 hist(df_4$LDL,
     main="")
 ```
+
 ```{r}
 #| label: fig-hts-2
 #| fig-cap: "Histogram of HDL levels"
@@ -208,6 +213,7 @@ par(mar = c(4, 4, 1, 1) + 0.1)
 hist(df_4$HDL,
     main="")
 ```
+
 ```{r}
 #| label: fig-qqplot-ldl
 #| fig-cap: "Q-Q Plot of LDL levels"
@@ -219,9 +225,11 @@ par(mar = c(4, 4, 1, 1) + 0.1)
 qqnorm(df_4$LDL, pch = 1, frame = FALSE, main="")
 qqline(df_4$LDL, col = "steelblue", lwd = 2)
 ```
+
 ## Comparing Continuous Data
 
 To explore the correlation between the continuous variables, LDL and HDL, a scatterplot was created (@fig-scatterplot_1), using color to indicate Size (Tall or Small) and shape for Planet (Earth and Venus). The plot reveals a negative trend: regardless of planet, small patients tend to have lower LDL and higher HDL levels, while the inverse is true for tall individuals.
+
 ```{r}
 #| label: fig-qqplot-hdl
 #| fig-cap: "Q-Q Plot of HDL levels"

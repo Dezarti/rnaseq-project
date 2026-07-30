@@ -1,5 +1,13 @@
 # Ignore raw and processed data
-data/
+data/Part_2/processed/
+codes/Part_2/
+back-up.csv
+test.R
+
+
+# Before finishing the files
+Reports/Report_2_Alejandro_Martinez.qmd
+Reports/Report_2_Alejandro_Martinez.pdf
 
 .quarto/
 
